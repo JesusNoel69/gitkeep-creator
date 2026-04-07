@@ -14,10 +14,29 @@
   "contributes": {
     "commands": [
       {
-        "command": "gitkeep-creator.helloWorld",
-        "title": "Hello World"
+        "command": "gitkeep-creator.managefiles",
+        "title": "Files .gitkeep"
       }
-    ]
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "gitkeep-creator",
+          "title": ".gitkeep files creator",
+          "icon": "resources/gitkeep.svg"
+        }
+      ]
+    },
+    "views": {
+      "gitkeep-creator": [
+        {
+          "type": "webview",
+          "id": "gitkeepPanel",
+          "name": "Gitkeep Panel",
+          "icon": "resources/gitkeep.svg"
+        }
+      ]
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run package",
