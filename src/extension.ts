@@ -1,23 +1,18 @@
 import * as vscode from "vscode";
+import * as fs from "fs";
+import * as path from "path";
 
 export function activate(context: vscode.ExtensionContext) {
   const disposable = vscode.commands.registerCommand(
     "gitkeep-creator.managefiles",
     async () => {
-      vscode.window.showInformationMessage(
-        "Hello World from .gitkeep creator!",
-      );
-
       const result = await vscode.window.showOpenDialog({
         canSelectFiles: false,
         canSelectFolders: true,
+        defaultUri: vscode.workspace.workspaceFolders?.[0].uri,
         canSelectMany: false,
-        openLabel: "Seleccionar carpeta",
+        openLabel: "Select .gitignore",
       });
-
-      if (result && result.length > 0) {
-        const folderPath = result[0].fsPath;
-      }
     },
   );
 
@@ -45,14 +40,29 @@ class PanelProvider implements vscode.WebviewViewProvider {
         });
 
         if (result && result.length > 0) {
+          const folderPath = result[0].fsPath;
+
+          const gitignorePath = path.join(folderPath, ".gitignore");
+
+          if (!fs.existsSync(gitignorePath)) {
+            vscode.window.showWarningMessage(
+              "There is no .gitignore in that folder",
+            );
+          } else {
+            vscode.window.showInformationMessage(".gitignore founded");
+          }
+
           webviewView.webview.postMessage({
             command: "setFolder",
-            path: result[0].fsPath,
+            path: folderPath,
           });
         }
       }
     });
-    webviewView.webview.html = `
+    webviewView.webview.html = this.htmlTemplate();
+  }
+  htmlTemplate(): string {
+    return `
     <html
       style="
         width:100%;
@@ -65,8 +75,8 @@ class PanelProvider implements vscode.WebviewViewProvider {
           justify-content: center;
           gap:5px;
         ">
-          <button type="button" style="border-radius: 3px; color: white; background:#2b7da3; height: 2rem; width:100%;">Add</button>
-          <button type="button" style="border-radius: 3px; background:red; width: 2rem; height: 2rem;">
+          <button type="button" style="cursor: pointer; border-radius: 3px; color: white; background:#2b7da3; height: 2rem; width:100%;">Add</button>
+          <button type="button" style="cursor: pointer; border-radius: 3px; background:red; width: 2rem; height: 2rem;">
             <svg
               viewBox="0 0 1024 1024"
               class="icon"
@@ -112,7 +122,7 @@ class PanelProvider implements vscode.WebviewViewProvider {
               text-overflow: ellipsis;
             "
           />
-          <button onclick="selectFolder()" type="button" style="border-radius: 3px; width: 2rem; height: 2rem;">...</button>
+          <button onclick="selectFolder()" type="button" style="cursor: pointer; border-radius: 3px; width: 2rem; height: 2rem;">...</button>
         </div>
 
         <pre style="
