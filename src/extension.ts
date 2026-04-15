@@ -31,35 +31,119 @@ class PanelProvider implements vscode.WebviewViewProvider {
     webviewView.webview.options = {
       enableScripts: true,
     };
+    let currentPath = "";
     webviewView.webview.onDidReceiveMessage(async (message) => {
       if (message.command === "selectFolder") {
         const result = await vscode.window.showOpenDialog({
-          canSelectFiles: false,
           canSelectFolders: true,
+          canSelectFiles: false,
           canSelectMany: false,
         });
 
         if (result && result.length > 0) {
-          const folderPath = result[0].fsPath;
-
-          const gitignorePath = path.join(folderPath, ".gitignore");
-
-          if (!fs.existsSync(gitignorePath)) {
-            vscode.window.showWarningMessage(
-              "There is no .gitignore in that folder",
-            );
-          } else {
-            vscode.window.showInformationMessage(".gitignore founded");
-          }
+          currentPath = result[0].fsPath;
 
           webviewView.webview.postMessage({
             command: "setFolder",
-            path: folderPath,
+            path: currentPath,
           });
         }
       }
+
+      if (message.command === "addFiles") {
+        if (!currentPath) {
+          vscode.window.showWarningMessage("Select a folder first");
+          return;
+        }
+
+        const gitignorePath = path.join(currentPath, ".gitignore");
+
+        let ignore: string[] = [];
+
+        if (fs.existsSync(gitignorePath)) {
+          const uri = vscode.Uri.file(gitignorePath);
+          ignore = await this.gitignoreFolders(uri);
+        }
+
+        await this.addFiles(ignore, vscode.Uri.file(currentPath));
+
+        const tree = await this.buildTree(vscode.Uri.file(currentPath));
+
+        webviewView.webview.postMessage({
+          command: "renderTree",
+          tree,
+        });
+      }
     });
+
     webviewView.webview.html = this.htmlTemplate();
+  }
+  async buildTree(root: vscode.Uri, prefix = ""): Promise<string> {
+    const entries = await vscode.workspace.fs.readDirectory(root);
+    let result = "";
+
+    for (const [name, type] of entries) {
+      result += `${prefix}${name}\n`;
+
+      if (type === vscode.FileType.Directory) {
+        const child = await this.buildTree(
+          vscode.Uri.joinPath(root, name),
+          prefix + "  ",
+        );
+        result += child;
+      }
+    }
+
+    return result;
+  }
+  async addFiles(
+    gitIgnoreFiles: string[],
+    rootPath: vscode.Uri,
+  ): Promise<void> {
+    const entries = await vscode.workspace.fs.readDirectory(rootPath);
+
+    for (const [name, type] of entries) {
+      const cleanIgnore = gitIgnoreFiles.map((f) => f.replace("/", ""));
+
+      if (type !== vscode.FileType.Directory) {
+        continue;
+      }
+
+      if (cleanIgnore.includes(name)) {
+        continue;
+      }
+      if (gitIgnoreFiles.includes(name)) {
+        continue;
+      }
+
+      const folderUri = vscode.Uri.joinPath(rootPath, name);
+
+      const subEntries = await vscode.workspace.fs.readDirectory(folderUri);
+
+      if (subEntries.length === 0) {
+        const fileUri = vscode.Uri.joinPath(folderUri, ".gitkeep");
+
+        await vscode.workspace.fs.writeFile(fileUri, new Uint8Array());
+      } else {
+        await this.addFiles(gitIgnoreFiles, folderUri);
+      }
+    }
+  }
+
+  async gitignoreFolders(fileUri: vscode.Uri): Promise<string[]> {
+    let file: string[] = [];
+    try {
+      const fileData = await vscode.workspace.fs.readFile(fileUri);
+
+      file = Buffer.from(fileData)
+        .toString("utf8")
+        .split("\n")
+        .map((line) => line.trim())
+        .filter((line) => line && !line.startsWith("#"));
+    } catch (error: any) {
+      vscode.window.showErrorMessage(`Cannot read file: ${error.message}`);
+    }
+    return file;
   }
   htmlTemplate(): string {
     return `
@@ -75,7 +159,7 @@ class PanelProvider implements vscode.WebviewViewProvider {
           justify-content: center;
           gap:5px;
         ">
-          <button type="button" style="cursor: pointer; border-radius: 3px; color: white; background:#2b7da3; height: 2rem; width:100%;">Add</button>
+          <button onclick="addFiles()" type="button" style="cursor: pointer; border-radius: 3px; color: white; background:#2b7da3; height: 2rem; width:100%;">Add</button>
           <button type="button" style="cursor: pointer; border-radius: 3px; background:red; width: 2rem; height: 2rem;">
             <svg
               viewBox="0 0 1024 1024"
@@ -125,11 +209,11 @@ class PanelProvider implements vscode.WebviewViewProvider {
           <button onclick="selectFolder()" type="button" style="cursor: pointer; border-radius: 3px; width: 2rem; height: 2rem;">...</button>
         </div>
 
-        <pre style="
+        <pre id="tree" style="
           border-radius: 3px;
           width: 100%; 
           height: 300px; 
-          border: solid 1px black;
+          border: solid 1px red;
           background: white;
           font-family: monospace;
           font-size: 12px;
@@ -143,11 +227,19 @@ class PanelProvider implements vscode.WebviewViewProvider {
           vscode.postMessage({ command: "selectFolder" });
         }
 
+        function addFiles() {
+          vscode.postMessage({ command: "addFiles" });
+        }
+
         window.addEventListener("message", event => {
           const message = event.data;
 
           if (message.command === "setFolder") {
             document.getElementById("pathInput").value = message.path;
+          }
+
+          if (message.command === "renderTree") {
+            document.getElementById("tree").textContent = message.tree;
           }
         });
       </script>
