@@ -84,6 +84,22 @@ class PanelProvider implements vscode.WebviewViewProvider {
           tree,
         });
       }
+
+      if (message.command === "removeFiles") {
+        if (!this.currentPath) {
+          vscode.window.showWarningMessage("Select a folder first");
+          return;
+        }
+
+        await this.removeFiles(vscode.Uri.file(this.currentPath), this.ignore);
+
+        const tree = await this.buildTree(vscode.Uri.file(this.currentPath));
+
+        webviewView.webview.postMessage({
+          command: "renderTree",
+          tree,
+        });
+      }
     });
     webviewView.webview.html = this.htmlTemplate();
   }
@@ -124,6 +140,38 @@ class PanelProvider implements vscode.WebviewViewProvider {
 
     return result;
   }
+
+  async removeFiles(
+    rootPath: vscode.Uri,
+    gitIgnoreFiles: string[],
+  ): Promise<void> {
+    const entries = await vscode.workspace.fs.readDirectory(rootPath);
+
+    const cleanIgnore = gitIgnoreFiles.map((f) => f.replace("/", ""));
+
+    for (const [name, type] of entries) {
+      const fileUri = vscode.Uri.joinPath(rootPath, name);
+
+      if (gitIgnoreFiles.includes(name)) {
+        continue;
+      }
+
+      if (
+        type === vscode.FileType.File &&
+        (name === ".gitkeep" || name === "gitkeep")
+      ) {
+        await vscode.workspace.fs.delete(fileUri);
+      }
+
+      if (type === vscode.FileType.Directory) {
+        const subEntries = await vscode.workspace.fs.readDirectory(fileUri);
+        if (subEntries.length !== 0) {
+          await this.removeFiles(fileUri, this.ignore);
+        }
+      }
+    }
+  }
+
   async addFiles(
     gitIgnoreFiles: string[],
     rootPath: vscode.Uri,
@@ -189,7 +237,7 @@ class PanelProvider implements vscode.WebviewViewProvider {
           gap:5px;
         ">
           <button onclick="addFiles()" type="button" style="cursor: pointer; border-radius: 3px; color: white; background:#2b7da3; height: 2rem; width:100%;">Add</button>
-          <button type="button" style="cursor: pointer; border-radius: 3px; background:red; width: 2rem; height: 2rem;">
+          <button onclick="removeFiles()" type="button" style="cursor: pointer; border-radius: 3px; background:red; width: 2rem; height: 2rem;">
             <svg
               viewBox="0 0 1024 1024"
               class="icon"
@@ -261,6 +309,9 @@ class PanelProvider implements vscode.WebviewViewProvider {
 
         function addFiles() {
           vscode.postMessage({ command: "addFiles" });
+        }
+        function removeFiles() {
+          vscode.postMessage({ command: "removeFiles" });
         }
 
         window.addEventListener("message", event => {
