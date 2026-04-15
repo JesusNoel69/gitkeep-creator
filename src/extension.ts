@@ -223,10 +223,7 @@ class PanelProvider implements vscode.WebviewViewProvider {
   htmlTemplate(): string {
     return `
     <html
-      style="
-        width:100%;
-        padding-right:1rem;
-      "
+      style="width:100%;"
     >
       <head>
       </head>
@@ -235,9 +232,10 @@ class PanelProvider implements vscode.WebviewViewProvider {
           display:flex;
           justify-content: center;
           gap:5px;
+          margin-top:20px;
         ">
-          <button onclick="addFiles()" type="button" style="cursor: pointer; border-radius: 3px; color: white; background:#2b7da3; height: 2rem; width:100%;">Add</button>
-          <button onclick="removeFiles()" type="button" style="cursor: pointer; border-radius: 3px; background:red; width: 2rem; height: 2rem;">
+          <button onclick="addFiles()" type="button" style="border: none; cursor: pointer; border-radius: 3px; color: white; background:#2b7da3; height: 2rem; width:100%;">Add</button>
+          <button onclick="removeFiles()" type="button" style="border: none; cursor: pointer; border-radius: 3px; background:red; width: 2rem; height: 2rem;">
             <svg
               viewBox="0 0 1024 1024"
               class="icon"
@@ -268,14 +266,18 @@ class PanelProvider implements vscode.WebviewViewProvider {
           display:flex;
           justify-content: center;
           gap:5px;
+          margin-top:20px;
         ">
           <input
             id="pathInput"
+            placeholder="Write/a/vaid/path"
             style="
               border-radius: 3px;
-              max-height: 22px;
+              max-height: 16px;
               width: calc(100% - 40px);
-              border: solid 2.5px;
+              border: 1px solid var(--vscode-editorGroup-border);
+              background: var(--vscode-editor-background);
+              color: var(--vscode-editor-foreground); 
               padding: 0.5rem 1rem;
               border-radius: 0.2rem 0.3rem;
               overflow: hidden;
@@ -283,7 +285,7 @@ class PanelProvider implements vscode.WebviewViewProvider {
               text-overflow: ellipsis;
             "
           />
-          <button onclick="selectFolder()" type="button" style="cursor: pointer; border-radius: 3px; width: 2rem; height: 2rem;">...</button>
+          <button onclick="selectFolder()" type="button" style="border: none; cursor: pointer; color: white; background:#2b7da3; border-radius: 3px; width: 2rem; height: 2.1rem;">...</button>
         </div>
 
         <pre id="tree" style="
@@ -298,7 +300,10 @@ class PanelProvider implements vscode.WebviewViewProvider {
           line-height: 1.4;
           overflow: auto;
           white-space: pre;
-        "></pre>
+        ">
+  project/
+  ├── ...
+        </pre>
       </body>
       <script>
         const vscode = acquireVsCodeApi();
