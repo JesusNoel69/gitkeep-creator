@@ -270,7 +270,7 @@ class PanelProvider implements vscode.WebviewViewProvider {
         ">
           <input
             id="pathInput"
-            placeholder="Write/a/vaid/path"
+            placeholder="Write/a/valid/path"
             style="
               border-radius: 3px;
               max-height: 16px;

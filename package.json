@@ -3,11 +3,25 @@
   "displayName": ".gitkeep creator",
   "description": "A project to allow adding .gitkeep files in empty folders",
   "version": "0.0.1",
+  "publisher": "jesusnoel",
+  "icon": "resources/gitkeep.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/JesusNoel69/gitkeep-creator"
+  },
+  "keywords": [
+    "gitkeep",
+    "git",
+    "empty folders",
+    "files",
+    "automation"
+  ],
   "engines": {
-    "vscode": "^1.110.0"
+    "vscode": "^1.80.0"
   },
   "categories": [
-    "Other"
+    "Other",
+    "SCM Providers"
   ],
   "activationEvents": [],
   "main": "./dist/extension.js",
@@ -15,7 +29,8 @@
     "commands": [
       {
         "command": "gitkeep-creator.managefiles",
-        "title": "Files .gitkeep"
+        "title": "Gitkeep: Manage Files",
+        "category": "Gitkeep"
       }
     ],
     "viewsContainers": {
